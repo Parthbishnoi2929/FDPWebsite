@@ -21,8 +21,10 @@ export const AnimatedPieChart: React.FC<AnimatedPieChartProps> = ({
 
   useEffect(() => {
     setIsVisible(true);
-    
-    // Animate pie chart data loading
+    // Animate from zero values
+    const zeroData = data.map(item => ({ ...item, value: 0 }));
+    setAnimatedData(zeroData);
+
     const timer = setTimeout(() => {
       setAnimatedData(data);
     }, 300);
@@ -32,12 +34,12 @@ export const AnimatedPieChart: React.FC<AnimatedPieChartProps> = ({
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
-      const data = payload[0];
+      const d = payload[0];
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="font-medium">{data.name}</p>
+          <p className="font-medium">{d.name}</p>
           <p className="text-nmit-blue">
-            Count: <span className="font-bold">{data.value}</span>
+            Count: <span className="font-bold">{d.value}</span>
           </p>
         </div>
       );
@@ -65,15 +67,15 @@ export const AnimatedPieChart: React.FC<AnimatedPieChartProps> = ({
               animationEasing="ease-out"
             >
               {animatedData.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
+                <Cell
+                  key={`cell-${index}`}
                   fill={entry.color || COLORS[index % COLORS.length]}
                   className="hover:opacity-80 transition-opacity duration-200 cursor-pointer"
                 />
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />
-            <Legend 
+            <Legend
               wrapperStyle={{ paddingTop: '20px' }}
               iconType="circle"
             />

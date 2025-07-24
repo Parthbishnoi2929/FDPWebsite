@@ -58,8 +58,11 @@ export const AllSubmissions: React.FC = () => {
     if (user?.role === 'admin') {
       return true; // Admin can see all submissions
     } else if (user?.role === 'hod') {
-      // HoD can only see submissions from their department
-      return submission.user?.department === user.department;
+      // HoD can only see submissions made by faculty in their department
+      return (
+        submission.user?.role === 'faculty' &&
+        submission.user?.department === user.department
+      );
     }
     return false; // Other roles shouldn't access this page
   });

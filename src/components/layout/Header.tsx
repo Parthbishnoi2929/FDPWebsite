@@ -13,18 +13,8 @@ export const Header: React.FC = () => {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
-        {/* Mobile Menu Button and Logo */}
+        {/* Logo and Title */}
         <div className="flex items-center space-x-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={toggleSidebar}
-            className="lg:hidden p-2"
-            aria-label="Toggle sidebar"
-          >
-            <Menu size={20} />
-          </Button>
-          
           <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-2 rounded-lg">
             <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
               <span className="text-blue-600 font-bold text-sm">N</span>
@@ -43,8 +33,9 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Desktop Menu Button */}
-        <div className="hidden lg:block">
+        {/* User Menu and Controls */}
+        <div className="flex items-center space-x-4">
+          {/* Sidebar Toggle Button (moved here) */}
           <Button
             variant="ghost"
             size="sm"
@@ -54,10 +45,7 @@ export const Header: React.FC = () => {
           >
             <Menu size={20} />
           </Button>
-        </div>
 
-        {/* User Menu */}
-        <div className="flex items-center space-x-4">
           {/* Notifications */}
           <NotificationDropdown />
 

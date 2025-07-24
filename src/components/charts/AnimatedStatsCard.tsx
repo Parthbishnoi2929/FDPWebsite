@@ -1,78 +1,99 @@
 
 import React, { useEffect, useState } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, Cell } from 'recharts';
+import { ChartData } from '@/types';
 
-interface AnimatedStatsCardProps {
+interface AnimatedBarChartProps {
+  data: ChartData[]; // ChartData should have a 'color' property for each bar
   title: string;
-  value: number;
-  icon: React.ReactNode;
-  color: string;
-  trend?: {
-    value: number;
-    isPositive: boolean;
-  };
-  delay?: number;
+  height?: number;
 }
 
-export const AnimatedStatsCard: React.FC<AnimatedStatsCardProps> = ({
+export const AnimatedBarChart: React.FC<AnimatedBarChartProps> = ({
+  data,
   title,
-  value,
-  icon,
-  color,
-  trend,
-  delay = 0
+  height = 300
 }) => {
-  const [displayValue, setDisplayValue] = useState(0);
+  const [animatedData, setAnimatedData] = useState<ChartData[]>([]);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsVisible(true);
-      
-      // Animate number counting
-      const duration = 1500;
-      const steps = 60;
-      const increment = value / steps;
-      let current = 0;
-      
-      const counter = setInterval(() => {
-        current += increment;
-        if (current >= value) {
-          setDisplayValue(value);
-          clearInterval(counter);
-        } else {
-          setDisplayValue(Math.floor(current));
-        }
-      }, duration / steps);
+    setIsVisible(true);
+    // Animate from zero values
+    const zeroData = data.map(item => ({ ...item, value: 0 }));
+    setAnimatedData(zeroData);
 
-      return () => clearInterval(counter);
-    }, delay);
+    const timer = setTimeout(() => {
+      setAnimatedData(data);
+    }, 300);
 
     return () => clearTimeout(timer);
-  }, [value, delay]);
+  }, [data]);
+
+  // Find the max value for Y-axis domain
+  const maxValue = Math.max(...data.map(item => item.value), 1);
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+          <p className="font-medium">{label}</p>
+          <p className="text-nmit-blue">
+            Count: <span className="font-bold">{payload[0].value}</span>
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const renderLabel = (props: any) => {
+    const { x, y, width, value } = props;
+    return (
+      <text
+        x={x + width / 2}
+        y={y - 8}
+        fill="#374151"
+        textAnchor="middle"
+        className="text-xs font-bold"
+      >
+        {value}
+      </text>
+    );
+  };
 
   return (
-    <div className={`nmit-card card-hover ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}>
+    <div className={`nmit-card ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}>
+      <div className="nmit-card-header">
+        <h3 className="nmit-card-title">{title}</h3>
+      </div>
       <div className="nmit-card-content">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-            <div className="flex items-baseline space-x-2">
-              <p className="text-3xl font-bold text-gray-900">
-                {displayValue.toLocaleString()}
-              </p>
-              {trend && (
-                <span className={`text-sm flex items-center ${
-                  trend.isPositive ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {trend.isPositive ? '↗' : '↘'} {Math.abs(trend.value)}%
-                </span>
-              )}
-            </div>
-          </div>
-          <div className={`p-3 rounded-full ${color}`}>
-            {icon}
-          </div>
-        </div>
+        <ResponsiveContainer width="100%" height={height}>
+          <BarChart data={animatedData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e0e7ff" />
+            <XAxis
+              dataKey="name"
+              tick={{ fontSize: 12 }}
+              angle={-45}
+              textAnchor="end"
+              height={80}
+            />
+            <YAxis tick={{ fontSize: 12 }} domain={[0, maxValue]} />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar
+              dataKey="value"
+              radius={[4, 4, 0, 0]}
+              animationDuration={1500}
+              animationEasing="ease-out"
+              className="hover:opacity-80 transition-opacity duration-200 cursor-pointer"
+            >
+              <LabelList dataKey="value" content={renderLabel} />
+              {animatedData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color || "#2C2E83"} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );

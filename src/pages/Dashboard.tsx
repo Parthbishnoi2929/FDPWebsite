@@ -125,23 +125,24 @@ export const Dashboard: React.FC = () => {
     { name: 'Rejected', value: rejectedSubmissions, color: '#FF4C4C' }
   ];
 
-  // Monthly trend data (last 6 months)
+  // Monthly trend data (last 6 months) - now with status breakdown
   const monthlyData = React.useMemo(() => {
     const months = [];
     const now = new Date();
-    
     for (let i = 5; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthName = date.toLocaleDateString('en-US', { month: 'short' });
-      const monthSubmissions = submissions.filter(s => {
+      // Filter submissions for this month
+      const monthSubs = submissions.filter(s => {
         const subDate = new Date(s.createdAt);
-        return subDate.getMonth() === date.getMonth() && 
+        return subDate.getMonth() === date.getMonth() &&
                subDate.getFullYear() === date.getFullYear();
-      }).length;
-      
-      months.push({ name: monthName, value: monthSubmissions });
+      });
+      const approved = monthSubs.filter(s => s.status === 'Approved by Admin').length;
+      const pending = monthSubs.filter(s => s.status === 'Pending HoD Approval' || s.status === 'Approved by HoD').length;
+      const rejected = monthSubs.filter(s => s.status === 'Rejected by HoD' || s.status === 'Rejected by Admin').length;
+      months.push({ name: monthName, approved, pending, rejected });
     }
-    
     return months;
   }, [submissions]);
 
