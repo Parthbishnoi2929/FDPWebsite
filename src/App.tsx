@@ -17,6 +17,7 @@ import { UserManagement } from "@/pages/UserManagement";
 import { Reports } from "@/pages/Reports";
 import { Settings } from "@/pages/Settings";
 import NotFound from "./pages/NotFound";
+import Settings from "@/pages/Settings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
