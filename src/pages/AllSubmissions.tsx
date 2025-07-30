@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Filter, Download, FileText, Users } from 'lucide-react';
 import type { Submission } from '@/types';
+import { transformDatabaseSubmission } from '@/utils/transformers';
 
 // Helper function to get title from different form data types
 const getSubmissionTitle = (submission: Submission): string => {
@@ -32,12 +33,47 @@ export const AllSubmissions: React.FC = () => {
   const [moduleFilter, setModuleFilter] = useState<string>('all');
   const [departmentFilter, setDepartmentFilter] = useState<string>('all');
 
+  // Fetch submissions based on user role
   const { data: submissions = [], isLoading, refetch } = useQuery({
-    queryKey: ['all-submissions'],
+    queryKey: ['all-submissions', user?.role, user?.department],
     queryFn: async () => {
-      const response = await submissionService.getAllSubmissions();
-      return response.data || [];
+      if (!user) return [];
+      
+      if (user.role === 'admin') {
+        // Admin can see all submissions
+        const response = await submissionService.getAllSubmissions();
+        return response.data || [];
+      } else if (user.role === 'hod') {
+        // HoD can see submissions from faculty in their department
+        const { data, error } = await supabase
+          .from('submissions')
+          .select(`
+            *,
+            user:users(
+              *,
+              department:departments!users_department_id_fkey(name)
+            )
+          `)
+          .eq('users.department.name', user.department)
+          .eq('users.role', 'faculty')
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching HoD submissions:', error);
+          return [];
+        }
+
+        // Transform the data using the existing transformer
+        const transformedSubmissions = data?.map(submission => 
+          transformDatabaseSubmission(submission)
+        ) || [];
+
+        return transformedSubmissions;
+      }
+      
+      return [];
     },
+    enabled: !!user,
   });
 
   const { data: departments = [] } = useQuery({
@@ -53,21 +89,8 @@ export const AllSubmissions: React.FC = () => {
     },
   });
 
-  // Filter submissions based on user role
-  const roleFilteredSubmissions = submissions.filter((submission) => {
-    if (user?.role === 'admin') {
-      return true; // Admin can see all submissions
-    } else if (user?.role === 'hod') {
-      // HoD can only see submissions made by faculty in their department
-      return (
-        submission.user?.role === 'faculty' &&
-        submission.user?.department === user.department
-      );
-    }
-    return false; // Other roles shouldn't access this page
-  });
-
-  const filteredSubmissions = roleFilteredSubmissions.filter((submission) => {
+  // Filter submissions based on search and filters
+  const filteredSubmissions = submissions.filter((submission) => {
     const title = getSubmissionTitle(submission);
     const matchesSearch = submission.user?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          submission.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -75,7 +98,6 @@ export const AllSubmissions: React.FC = () => {
     
     const matchesStatus = statusFilter === 'all' || submission.status === statusFilter;
     const matchesModule = moduleFilter === 'all' || submission.moduleType === moduleFilter;
-    // Fixed: Use department name instead of department_id for filtering
     const matchesDepartment = departmentFilter === 'all' || 
       departments.find(dept => dept.id === departmentFilter)?.name === submission.user?.department;
     
@@ -159,7 +181,7 @@ export const AllSubmissions: React.FC = () => {
             <p className="text-muted-foreground">
               {user.role === 'admin' 
                 ? 'View and manage all faculty submissions' 
-                : 'View submissions from your department'
+                : `View submissions from ${user.department} department faculty`
               }
             </p>
           </div>
@@ -169,6 +191,16 @@ export const AllSubmissions: React.FC = () => {
           Export Data
         </Button>
       </div>
+
+      {/* Debug Info */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardContent className="pt-6">
+          <p className="text-sm">
+            Debug: Found {submissions.length} total submissions, {filteredSubmissions.length} after filtering
+            {user.role === 'hod' && ` for ${user.department} department`}
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Filters */}
       <Card>
@@ -261,7 +293,9 @@ export const AllSubmissions: React.FC = () => {
               <p className="text-sm">
                 {searchTerm || statusFilter !== 'all' || moduleFilter !== 'all' || departmentFilter !== 'all'
                   ? 'Try adjusting your search criteria'
-                  : 'No submissions have been made yet'
+                  : user.role === 'hod' 
+                    ? `No submissions found from ${user.department} department faculty`
+                    : 'No submissions have been made yet'
                 }
               </p>
             </div>

@@ -120,9 +120,9 @@ export const Dashboard: React.FC = () => {
 
   // Status distribution for pie chart
   const statusData = [
-    { name: 'Approved', value: approvedSubmissions, color: '#00C49F' },
-    { name: 'Pending', value: pendingSubmissions, color: '#FFBB28' },
-    { name: 'Rejected', value: rejectedSubmissions, color: '#FF4C4C' }
+    { name: 'Approved', value: approvedSubmissions, color: '#10B981' },
+    { name: 'Pending', value: pendingSubmissions, color: '#F59E0B' },
+    { name: 'Rejected', value: rejectedSubmissions, color: '#EF4444' }
   ];
 
   // Monthly trend data (last 6 months) - now with status breakdown

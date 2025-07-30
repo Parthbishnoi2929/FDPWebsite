@@ -2,13 +2,13 @@
 import type { DatabaseSubmission, DatabaseUser } from '@/types/database';
 import type { Submission, User, ModuleType, SubmissionStatus } from '@/types';
 
-export const transformDatabaseUser = (dbUser: DatabaseUser): User => ({
+export const transformDatabaseUser = (dbUser: DatabaseUser & { department?: { name: string } }): User => ({
   id: dbUser.id,
   employeeId: dbUser.employee_id,
   name: dbUser.name,
   email: dbUser.email,
   role: dbUser.role as 'faculty' | 'hod' | 'admin',
-  department: dbUser.department_id || '',
+  department: dbUser.department?.name || dbUser.department_id || '',
   designation: dbUser.designation,
   institution: dbUser.institution,
   createdAt: dbUser.created_at,

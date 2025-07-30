@@ -26,4 +26,7 @@ export interface DatabaseUser {
   auth_user_id: string | null;
   created_at: string;
   updated_at: string;
+  department?: {
+    name: string;
+  };
 }
