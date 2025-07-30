@@ -22,6 +22,50 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Function to fetch user profile
+  const fetchUserProfile = async (authUser: SupabaseUser) => {
+    try {
+      const { data: userProfile, error } = await supabase
+        .from('users')
+        .select(`
+          *,
+          department:departments!users_department_id_fkey(name)
+        `)
+        .eq('auth_user_id', authUser.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching user profile:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load user profile",
+          variant: "destructive"
+        });
+        return null;
+      }
+
+      if (userProfile) {
+        const mappedUser: User = {
+          id: userProfile.id,
+          employeeId: userProfile.employee_id,
+          name: userProfile.name,
+          email: userProfile.email,
+          role: userProfile.role as 'faculty' | 'hod' | 'admin',
+          department: userProfile.department?.name || 'Unknown',
+          designation: userProfile.designation,
+          institution: userProfile.institution,
+          createdAt: userProfile.created_at,
+          updatedAt: userProfile.updated_at
+        };
+        return mappedUser;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -30,47 +74,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSession(session);
         
         if (session?.user) {
-          // Fetch user profile from our users table
-          setTimeout(async () => {
-            try {
-              const { data: userProfile, error } = await supabase
-                .from('users')
-                .select(`
-                  *,
-                  department:departments!users_department_id_fkey(name)
-                `)
-                .eq('auth_user_id', session.user.id)
-                .single();
-
-              if (error && error.code !== 'PGRST116') {
-                console.error('Error fetching user profile:', error);
-                toast({
-                  title: "Error",
-                  description: "Failed to load user profile",
-                  variant: "destructive"
-                });
-                return;
-              }
-
-              if (userProfile) {
-                const mappedUser: User = {
-                  id: userProfile.id,
-                  employeeId: userProfile.employee_id,
-                  name: userProfile.name,
-                  email: userProfile.email,
-                  role: userProfile.role as 'faculty' | 'hod' | 'admin',
-                  department: userProfile.department?.name || 'Unknown',
-                  designation: userProfile.designation,
-                  institution: userProfile.institution,
-                  createdAt: userProfile.created_at,
-                  updatedAt: userProfile.updated_at
-                };
-                setUser(mappedUser);
-              }
-            } catch (error) {
-              console.error('Error in auth state change:', error);
-            }
-          }, 0);
+          // Fetch user profile immediately
+          const userProfile = await fetchUserProfile(session.user);
+          setUser(userProfile);
         } else {
           setUser(null);
         }
@@ -80,10 +86,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session:', session);
-      // Auth state change handler will handle the rest
-    });
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Initial session:', session);
+        
+        if (session?.user) {
+          const userProfile = await fetchUserProfile(session.user);
+          setUser(userProfile);
+        }
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+        setIsLoading(false);
+      }
+    };
+
+    initializeAuth();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -104,28 +124,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           description: error.message,
           variant: "destructive"
         });
+        setIsLoading(false);
         return false;
       }
 
       if (data.user) {
-        toast({
-          title: "Login Successful",
-          description: "Welcome back!"
-        });
+        const userProfile = await fetchUserProfile(data.user);
+        setUser(userProfile);
+        setSession(data.session);
+        setIsLoading(false);
         return true;
       }
 
+      setIsLoading(false);
       return false;
     } catch (error) {
       console.error('Login error:', error);
-      toast({
-        title: "Login Error",
-        description: "An error occurred during login. Please try again.",
-        variant: "destructive"
-      });
-      return false;
-    } finally {
       setIsLoading(false);
+      return false;
     }
   };
 
